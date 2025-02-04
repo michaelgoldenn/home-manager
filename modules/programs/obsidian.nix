@@ -76,6 +76,58 @@ in {
               }
             '';
           };
+          themes = mkOption {
+            type = types.submodule {
+              options = {
+                enable = mkEnableOption "enable theme";
+                manifest = mkOption {
+                  type = types.submodule {
+                    options = {
+                      name = mkOption {
+                        type = types.str;
+                        description = "Theme name";
+                        default = "Home-Manager Theme";
+                      };
+                      version = mkOption {
+                        type = types.str;
+                        description = "Theme version";
+                        default = "1.2.3";
+                      };
+                      minAppVersion = mkOption {
+                        type = types.str;
+                        description = "Minimum app version supported";
+                        default = "1.0.0";
+                      };
+                      author = mkOption {
+                        type = types.str;
+                        description = "Theme author";
+                        default = "Home-Manager";
+                      };
+                      authorURL = mkOption {
+                        type = types.str;
+                        description = "URL for author's homepage";
+                        default = "https://github.com/nix-community/home-manager";
+                      };
+                    };
+                  };
+                  description = "Theme manifest configuration";
+                };
+                theme = mkOption {
+                  type = types.lines;
+                  description = "Custom CSS content for the theme";
+                  default = "";
+                  example = ''
+                    body {
+                      background-color: #f0f0f0;
+                    }
+                    .theme-dark {
+                      color: #ffffff;
+                    }
+                  '';
+                };
+              };
+            };
+          };
           extraConfig = mkOption {
             type = lib.types.attrsOf (lib.types.attrs);
             default = { };
@@ -104,6 +156,8 @@ in {
           enabledCommunityPlugins =
             filterAttrs (_: p: p.enable) vaultCfg.community-plugins;
           communityPluginsList = attrNames enabledCommunityPlugins;
+          enabledThemes = 
+            filterAttrs (_: p: p.enable) vaultCfg.themes;
 
           vaultPath = if hasPrefix "~/" vaultCfg.path then
             "${config.home.homeDirectory}/${removePrefix "~/" vaultCfg.path}"
@@ -114,6 +168,7 @@ in {
 
           corePluginsJson = builtins.toJSON corePluginsList;
           communityPluginsJson = builtins.toJSON communityPluginsList;
+          
 
           corePluginConfigs = mapAttrs (_: p: p.config) enabledCorePlugins;
           appJson = corePluginConfigs // (vaultCfg.extraConfig.app or { });
@@ -147,8 +202,22 @@ in {
               text = builtins.toJSON content;
             }) (filterAttrs (_: content: content != { }) extraConfigFiltered);
 
+          themeFiles = foldl' (acc: themeCfg:
+            let
+              manifest = themeCfg.manifest;
+              themeDir = "${obsidianDir}/themes/${manifest.name}";
+              manifestFile = {
+                "${themeDir}/manifest.json".text = builtins.toJSON manifest;
+              };
+              cssFile = {
+                "${themeDir}/theme.css".text = themeCfg.theme;
+              };
+            in
+            acc // manifestFile // cssFile
+          ) {} (attrValues enabledThemes);
+
           allFiles = coreFile // communityFile // appFile // communityDataFiles
-            // extraConfigFiles;
+            // extraConfigFiles // themeFiles;
         in mkIf enabled allFiles) cfg.vaults;
     in foldl' (a: b: a // b) { } vaultFiles;
   };
