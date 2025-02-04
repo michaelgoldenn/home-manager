@@ -15,7 +15,7 @@ let
     };
   };
 in {
-  meta.maintainers = with lib.hm.maintainers; [ michaelgoldenn ];
+  meta.maintainers = [ maintainers.michaelgoldenn ];
 
   options.programs.obsidian = {
     enable = mkEnableOption "obsidian";
