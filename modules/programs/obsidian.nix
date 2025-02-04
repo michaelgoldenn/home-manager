@@ -77,7 +77,7 @@ in {
             '';
           };
           themes = mkOption {
-            type = types.submodule {
+            type = types.attrsOf (types.submodule {
               options = {
                 enable = mkEnableOption "enable theme";
                 manifest = mkOption {
@@ -126,7 +126,9 @@ in {
                   '';
                 };
               };
-            };
+            });
+            default = {};
+            description = "Obsidian themes configuration";
           };
           extraConfig = mkOption {
             type = lib.types.attrsOf (lib.types.attrs);
